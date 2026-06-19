@@ -1,0 +1,14 @@
+{
+  "name": "backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --import ./src/proxy-bootstrap.js src/server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.6.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "undici": "^6"
+  }
+}

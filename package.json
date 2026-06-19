@@ -1,0 +1,11 @@
+{
+  "name": "webapp",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --filter frontend build",
+    "start": "node backend/src/start.js"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  }
+}
