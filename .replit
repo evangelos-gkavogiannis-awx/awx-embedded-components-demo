@@ -1,9 +1,6 @@
 run = "pnpm start"
 entrypoint = "backend/src/start.js"
 
-[env]
-PORT = "3000"
-
 [nix]
 channel = "stable-24_05"
 
@@ -12,6 +9,6 @@ localPort = 3000
 externalPort = 80
 
 [deployment]
-build = ["sh", "-c", "pnpm install && pnpm build"]
-run = ["sh", "-c", "node --import ./backend/src/proxy-bootstrap.js backend/src/server.js"]
 deploymentTarget = "cloudrun"
+build = "pnpm install && pnpm build"
+run = "node --import ./backend/src/proxy-bootstrap.js backend/src/server.js"
