@@ -10,3 +10,8 @@ channel = "stable-24_05"
 [[ports]]
 localPort = 3000
 externalPort = 80
+
+[deployment]
+build = ["sh", "-c", "pnpm install && pnpm build"]
+run = ["sh", "-c", "node --import ./backend/src/proxy-bootstrap.js backend/src/server.js"]
+deploymentTarget = "cloudrun"
