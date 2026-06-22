@@ -11,22 +11,26 @@ export default function TransferComponent({ credentials, onBack, setError }) {
   const [activeAccountId, setActiveAccountId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isShowingPayload, setIsShowingPayload] = useState(false);
+  const [payloadData, setPayloadData] = useState(null);
+  const [createResult, setCreateResult] = useState(null);
   const elementRef = useRef(null);
   const containerRef = useRef(null);
 
   const handleInitialize = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setPayloadData(null);
+    setCreateResult(null);
 
     try {
-      // Get auth code with transfer scopes
       const authRes = await fetch(BASE + '/api/get-auth-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId: credentials.clientId,
           apiKey: credentials.apiKey,
-          accountId,
+          accountId: accountId.trim() || undefined,
           scopes: ['w:awx_action:transfers_edit'],
         }),
       });
@@ -40,7 +44,6 @@ export default function TransferComponent({ credentials, onBack, setError }) {
       setActiveAccountId(accountId.trim());
       setStep('initializing');
 
-      // Initialize SDK
       await init({
         locale: 'en',
         env: 'demo',
@@ -50,7 +53,6 @@ export default function TransferComponent({ credentials, onBack, setError }) {
         clientId: credentials.clientId,
       });
 
-      // Create payout form element with optional beneficiary pre-fill
       const elementOptions = {
         defaultValues: {
           source_currency: 'USD',
@@ -65,7 +67,6 @@ export default function TransferComponent({ credentials, onBack, setError }) {
       elementRef.current = element;
 
       element.on('ready', () => {
-        console.log('Transfer form ready');
         setStep('ready');
         setIsLoading(false);
       });
@@ -86,13 +87,32 @@ export default function TransferComponent({ credentials, onBack, setError }) {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleShowPayload = async () => {
     if (!elementRef.current) return;
-
-    setIsSubmitting(true);
+    setIsShowingPayload(true);
+    setPayloadData(null);
+    setCreateResult(null);
     try {
       const results = await elementRef.current.submit();
+      if (results.errors) {
+        throw new Error(results.errors.message || 'Please fix the form errors before submitting');
+      }
+      setPayloadData(results.values);
+    } catch (err) {
+      console.error('Show payload error:', err);
+      setError(err.message);
+    } finally {
+      setIsShowingPayload(false);
+    }
+  };
 
+  const handleCreate = async () => {
+    if (!elementRef.current) return;
+    setIsSubmitting(true);
+    setCreateResult(null);
+    setPayloadData(null);
+    try {
+      const results = await elementRef.current.submit();
       if (results.errors) {
         throw new Error(results.errors.message || 'Please fix the form errors before submitting');
       }
@@ -103,7 +123,7 @@ export default function TransferComponent({ credentials, onBack, setError }) {
         body: JSON.stringify({
           clientId: credentials.clientId,
           apiKey: credentials.apiKey,
-          accountId: activeAccountId,
+          accountId: activeAccountId || undefined,
           transferPayload: results.values,
         }),
       });
@@ -114,10 +134,10 @@ export default function TransferComponent({ credentials, onBack, setError }) {
       }
 
       const data = await response.json();
-      alert('Transfer created successfully! ID: ' + data.id);
+      setCreateResult(data);
       console.log('Created transfer:', data);
     } catch (err) {
-      console.error('Submit error:', err);
+      console.error('Create error:', err);
       setError(err.message);
     } finally {
       setIsSubmitting(false);
@@ -127,11 +147,7 @@ export default function TransferComponent({ credentials, onBack, setError }) {
   useEffect(() => {
     return () => {
       if (elementRef.current) {
-        try {
-          elementRef.current.unmount();
-        } catch (e) {
-          // Ignore unmount errors
-        }
+        try { elementRef.current.unmount(); } catch (e) { /* ignore */ }
       }
     };
   }, []);
@@ -143,32 +159,32 @@ export default function TransferComponent({ credentials, onBack, setError }) {
           &larr; Back to components
         </button>
         <h1 style={styles.title}>Transfer Embedded Component</h1>
-        <p style={styles.subtitle}>
-          Initiate fund transfers to beneficiaries
-        </p>
+        <p style={styles.subtitle}>Initiate fund transfers to beneficiaries</p>
       </div>
 
       {step === 'enter-details' && (
         <div style={styles.formCard}>
           <h2 style={styles.formTitle}>Transfer Details</h2>
           <p style={styles.formSubtitle}>
-            Enter account and optionally a beneficiary to pre-fill
+            Provide a connected account ID to create transfers on behalf of a connected account.{' '}
+            <span style={styles.optionalBadge}>Optional</span>
           </p>
           <form onSubmit={handleInitialize} style={styles.form}>
             <div style={styles.inputGroup}>
-              <label style={styles.label}>Account ID *</label>
+              <label style={styles.label}>
+                Account ID <span style={styles.optionalLabel}>(Optional)</span>
+              </label>
               <input
                 type="text"
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
                 placeholder="e.g., acct_xxxxxxxxxxxxxxxxxxxx"
                 style={styles.input}
-                required
               />
             </div>
             <div style={styles.inputGroup}>
               <label style={styles.label}>
-                Beneficiary ID <span style={styles.optional}>(optional)</span>
+                Beneficiary ID <span style={styles.optionalLabel}>(Optional)</span>
               </label>
               <input
                 type="text"
@@ -183,10 +199,11 @@ export default function TransferComponent({ credentials, onBack, setError }) {
             </div>
             <button
               type="submit"
-              disabled={isLoading || !accountId}
+              disabled={isLoading}
               style={{
                 ...styles.submitButton,
-                opacity: isLoading || !accountId ? 0.7 : 1,
+                opacity: isLoading ? 0.7 : 1,
+                cursor: isLoading ? 'not-allowed' : 'pointer',
               }}
             >
               {isLoading ? 'Initializing...' : 'Launch Transfer Form'}
@@ -215,11 +232,23 @@ export default function TransferComponent({ credentials, onBack, setError }) {
       {step === 'ready' && (
         <div style={styles.buttonContainer}>
           <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
+            onClick={handleShowPayload}
+            disabled={isShowingPayload || isSubmitting}
             style={{
-              ...styles.actionButton,
-              opacity: isSubmitting ? 0.7 : 1,
+              ...styles.secondaryButton,
+              opacity: isShowingPayload || isSubmitting ? 0.7 : 1,
+              cursor: isShowingPayload || isSubmitting ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {isShowingPayload ? 'Retrieving...' : 'Show Transfer Payload'}
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={isSubmitting || isShowingPayload}
+            style={{
+              ...styles.primaryButton,
+              opacity: isSubmitting || isShowingPayload ? 0.7 : 1,
+              cursor: isSubmitting || isShowingPayload ? 'not-allowed' : 'pointer',
             }}
           >
             {isSubmitting ? 'Creating...' : 'Create Transfer'}
@@ -227,10 +256,24 @@ export default function TransferComponent({ credentials, onBack, setError }) {
         </div>
       )}
 
+      {payloadData && (
+        <div style={styles.resultCard}>
+          <h3 style={styles.resultTitle}>Transfer Payload</h3>
+          <pre style={styles.resultPre}>{JSON.stringify(payloadData, null, 2)}</pre>
+        </div>
+      )}
+
+      {createResult && (
+        <div style={{ ...styles.resultCard, borderLeft: '4px solid #f59e0b' }}>
+          <h3 style={{ ...styles.resultTitle, color: '#b45309' }}>
+            Transfer Created — ID: {createResult.id}
+          </h3>
+          <pre style={styles.resultPre}>{JSON.stringify(createResult, null, 2)}</pre>
+        </div>
+      )}
+
       <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         ${embeddedIframeStyles}
       `}</style>
     </div>
@@ -239,9 +282,7 @@ export default function TransferComponent({ credentials, onBack, setError }) {
 
 const styles = {
   container: {},
-  header: {
-    marginBottom: '24px',
-  },
+  header: { marginBottom: '24px' },
   backButton: {
     background: 'none',
     border: 'none',
@@ -251,16 +292,8 @@ const styles = {
     padding: '0',
     marginBottom: '16px',
   },
-  title: {
-    fontSize: '24px',
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: '8px',
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: '#666',
-  },
+  title: { fontSize: '24px', fontWeight: '600', color: '#1a1a1a', marginBottom: '8px' },
+  subtitle: { fontSize: '14px', color: '#666' },
   formCard: {
     backgroundColor: '#fff',
     borderRadius: '16px',
@@ -268,36 +301,22 @@ const styles = {
     boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
     maxWidth: '480px',
   },
-  formTitle: {
-    fontSize: '20px',
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: '8px',
-  },
-  formSubtitle: {
-    fontSize: '14px',
-    color: '#666',
-    marginBottom: '24px',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-  },
-  inputGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  label: {
-    fontSize: '14px',
+  formTitle: { fontSize: '20px', fontWeight: '600', color: '#1a1a1a', marginBottom: '8px' },
+  formSubtitle: { fontSize: '14px', color: '#666', marginBottom: '24px' },
+  optionalBadge: {
+    display: 'inline-block',
+    padding: '2px 8px',
+    backgroundColor: '#fffbeb',
+    color: '#b45309',
+    border: '1px solid #fde68a',
+    borderRadius: '4px',
+    fontSize: '12px',
     fontWeight: '500',
-    color: '#333',
-    marginBottom: '8px',
   },
-  optional: {
-    fontWeight: '400',
-    color: '#888',
-  },
+  form: { display: 'flex', flexDirection: 'column', gap: '20px' },
+  inputGroup: { display: 'flex', flexDirection: 'column' },
+  label: { fontSize: '14px', fontWeight: '500', color: '#333', marginBottom: '8px' },
+  optionalLabel: { fontWeight: '400', color: '#888' },
   input: {
     padding: '12px 16px',
     fontSize: '14px',
@@ -305,11 +324,7 @@ const styles = {
     borderRadius: '8px',
     outline: 'none',
   },
-  hint: {
-    fontSize: '12px',
-    color: '#888',
-    marginTop: '6px',
-  },
+  hint: { fontSize: '12px', color: '#888', marginTop: '6px' },
   submitButton: {
     padding: '14px',
     fontSize: '16px',
@@ -318,7 +333,6 @@ const styles = {
     backgroundColor: '#f59e0b',
     border: 'none',
     borderRadius: '8px',
-    cursor: 'pointer',
   },
   loadingCard: {
     backgroundColor: '#fff',
@@ -336,21 +350,51 @@ const styles = {
     margin: '0 auto 16px',
     animation: 'spin 1s linear infinite',
   },
-  loadingText: {
-    fontSize: '16px',
-    color: '#666',
-  },
+  loadingText: { fontSize: '16px', color: '#666' },
   buttonContainer: {
     marginTop: '24px',
+    display: 'flex',
+    gap: '12px',
+    flexWrap: 'wrap',
   },
-  actionButton: {
-    padding: '14px 32px',
-    fontSize: '16px',
+  secondaryButton: {
+    padding: '14px 28px',
+    fontSize: '15px',
+    fontWeight: '600',
+    color: '#f59e0b',
+    backgroundColor: '#fff',
+    border: '2px solid #f59e0b',
+    borderRadius: '8px',
+  },
+  primaryButton: {
+    padding: '14px 28px',
+    fontSize: '15px',
     fontWeight: '600',
     color: '#fff',
     backgroundColor: '#f59e0b',
     border: 'none',
     borderRadius: '8px',
-    cursor: 'pointer',
+  },
+  resultCard: {
+    marginTop: '24px',
+    backgroundColor: '#fff',
+    borderRadius: '16px',
+    padding: '24px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+  },
+  resultTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    marginBottom: '12px',
+    color: '#1a1a1a',
+  },
+  resultPre: {
+    background: '#f5f7fa',
+    padding: '16px',
+    borderRadius: '8px',
+    overflow: 'auto',
+    fontSize: '13px',
+    margin: 0,
+    lineHeight: '1.5',
   },
 };

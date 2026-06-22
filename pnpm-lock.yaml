@@ -19,6 +19,9 @@ importers:
       express:
         specifier: ^4.19.2
         version: 4.22.2
+      express-rate-limit:
+        specifier: ^7.5.0
+        version: 7.5.1(express@4.22.2)
       undici:
         specifier: ^6
         version: 6.27.0
@@ -610,6 +613,12 @@ packages:
   expand-template@2.0.3:
     resolution: {integrity: sha512-XYfuKMvj4O35f/pOXLObndIRvyQ+/+6AhODh+OKWj9S9498pHHn/IMszH+gt0fBCRWMNfk1ZSp5x3AifmnI2vg==}
     engines: {node: '>=6'}
+
+  express-rate-limit@7.5.1:
+    resolution: {integrity: sha512-7iN8iPMDzOMHPUYllBEsQdWVB6fPDMPqwjBaFrgr4Jgr/+okjvzAy+UHlYYL/Vs0OsOrMkwS6PJDkFlJwoxUnw==}
+    engines: {node: '>= 16'}
+    peerDependencies:
+      express: '>= 4.11'
 
   express@4.22.2:
     resolution: {integrity: sha512-IuL+Elrou2ZvCFHs18/CIzy2Nzvo25nZ1/D2eIZlz7c+QUayAcYoiM2BthCjs+EBHVpjYjcuLDAiCWgeIX3X1Q==}
@@ -1485,6 +1494,10 @@ snapshots:
   etag@1.8.1: {}
 
   expand-template@2.0.3: {}
+
+  express-rate-limit@7.5.1(express@4.22.2):
+    dependencies:
+      express: 4.22.2
 
   express@4.22.2:
     dependencies:

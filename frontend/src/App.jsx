@@ -193,6 +193,9 @@ export default function App() {
               </svg>
               API Credentials
             </h2>
+            <p style={styles.disclaimer}>
+              Your API key is used only to authenticate with Airwallex and is never stored.
+            </p>
             <div style={styles.credentialsGrid}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>API Client ID</label>
@@ -420,6 +423,12 @@ const styles = {
     fontSize: '12px',
     color: '#888',
     marginTop: '8px',
+  },
+  disclaimer: {
+    fontSize: '12px',
+    color: '#aaa',
+    marginTop: '2px',
+    marginBottom: '16px',
   },
   errorBanner: {
     display: 'flex',

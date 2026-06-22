@@ -162,7 +162,7 @@ export default function SCAComponent({ credentials, onBack, setError }) {
         }
       }
 
-      const element = await createElement('scaSetup', {
+      const element = await createElement('scaManagement', {
         userEmail: userEmail.trim(),
         prefilledMobileInfo: {},
       });

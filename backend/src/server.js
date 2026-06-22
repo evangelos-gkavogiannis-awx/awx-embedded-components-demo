@@ -11,6 +11,7 @@
  */
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
@@ -20,6 +21,15 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,                  // max 100 requests per IP per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+app.use('/api', apiLimiter);
 
 // ── API routes ───────────────────────────────────────────────────────────────
 import { generateCodeVerifier, generateCodeChallengeFromVerifier } from './authUtils.js';
@@ -179,8 +189,8 @@ app.post('/api/create-account', async (req, res) => {
 app.post('/api/get-auth-code', async (req, res) => {
   const { clientId, apiKey, accountId, scopes, identity } = req.body;
 
-  if (!clientId || !apiKey || !accountId) {
-    return res.status(400).json({ error: 'clientId, apiKey, and accountId are required' });
+  if (!clientId || !apiKey) {
+    return res.status(400).json({ error: 'clientId and apiKey are required' });
   }
 
   try {
@@ -188,26 +198,33 @@ app.post('/api/get-auth-code', async (req, res) => {
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallengeFromVerifier(codeVerifier);
 
-    // Default scopes based on component type
     const defaultScopes = scopes || ['w:awx_action:onboarding'];
 
     const authPayload = {
       scope: defaultScopes,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
-      identity: identity || accountId
     };
+
+    const resolvedIdentity = identity || accountId;
+    if (resolvedIdentity) {
+      authPayload.identity = resolvedIdentity;
+    }
 
     console.log('Auth payload:', JSON.stringify(authPayload, null, 2));
 
+    const authHeaders = {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'x-client-id': clientId,
+    };
+    if (accountId) {
+      authHeaders['x-on-behalf-of'] = accountId;
+    }
+
     const response = await airwallexFetch(`${AIRWALLEX_API_BASE}/api/v1/authentication/authorize`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'x-client-id': clientId,
-        'x-on-behalf-of': accountId
-      },
+      headers: authHeaders,
       body: JSON.stringify(authPayload)
     });
 

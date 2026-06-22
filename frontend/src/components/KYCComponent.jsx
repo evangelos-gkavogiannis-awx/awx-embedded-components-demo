@@ -10,7 +10,7 @@ const BASE = window.__API_BASE__ || '';
 
 export default function KYCComponent({ credentials, onBack, setError }) {
   const [step, setStep] = useState('create-account'); // 'create-account', 'initializing', 'ready'
-  const [email, setEmail] = useState('test@airwallex.com');
+  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [accountId, setAccountId] = useState(null);
   const [kycStatus, setKycStatus] = useState(null);
