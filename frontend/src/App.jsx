@@ -20,6 +20,7 @@ const components = [
       </svg>
     ),
     color: '#6366f1',
+    docsUrl: 'https://www.airwallex.com/docs/connected-accounts/onboarding/kyc-and-onboarding/embedded-kyc-component',
   },
   {
     id: 'kyc-rfi',
@@ -34,6 +35,7 @@ const components = [
       </svg>
     ),
     color: '#8b5cf6',
+    docsUrl: 'https://www.airwallex.com/docs/connected-accounts/handle-rfis/handle-kyc-rfi/embedded-kyc-rfi-component',
   },
   {
     id: 'beneficiary',
@@ -48,6 +50,7 @@ const components = [
       </svg>
     ),
     color: '#10b981',
+    docsUrl: 'https://www.airwallex.com/docs/payouts/beneficiaries/embedded-beneficiary-component',
   },
   {
     id: 'transfer',
@@ -60,6 +63,7 @@ const components = [
       </svg>
     ),
     color: '#f59e0b',
+    docsUrl: 'https://www.airwallex.com/docs/payouts/transfers/embedded-transfer-component',
   },
   {
     id: 'sca',
@@ -71,6 +75,7 @@ const components = [
       </svg>
     ),
     color: '#e11d48',
+    docsUrl: 'https://www.airwallex.com/docs/global-treasury/compliance-support/strong-customer-authentication-(sca)/embedded-sca-component',
   },
 ];
 
@@ -225,48 +230,58 @@ export default function App() {
             <h2 style={styles.sectionTitle}>Select a Component</h2>
             <div style={styles.componentGrid}>
               {components.map((component) => (
-                <button
-                  key={component.id}
-                  onClick={() => handleComponentSelect(component.id)}
-                  disabled={isLoading}
-                  style={{
-                    ...styles.componentCard,
-                    opacity: isLoading ? 0.7 : 1,
-                    cursor: isLoading ? 'wait' : 'pointer',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isLoading) {
-                      e.currentTarget.style.transform = 'translateY(-4px)';
-                      e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.12)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)';
-                  }}
-                >
-                  <div
+                <div key={component.id} style={styles.cardWrapper}>
+                  <button
+                    onClick={() => handleComponentSelect(component.id)}
+                    disabled={isLoading}
                     style={{
-                      ...styles.iconWrapper,
-                      backgroundColor: `${component.color}15`,
-                      color: component.color,
+                      ...styles.componentCard,
+                      opacity: isLoading ? 0.7 : 1,
+                      cursor: isLoading ? 'wait' : 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isLoading) {
+                        e.currentTarget.style.transform = 'translateY(-4px)';
+                        e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.12)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)';
                     }}
                   >
-                    {component.icon}
-                  </div>
-                  <div style={styles.componentInfo}>
-                    <h3 style={styles.componentTitle}>{component.title}</h3>
-                    <p style={styles.componentDescription}>{component.description}</p>
-                  </div>
-                  <span
-                    style={{
-                      ...styles.launchBadge,
-                      backgroundColor: component.color,
-                    }}
+                    <div
+                      style={{
+                        ...styles.iconWrapper,
+                        backgroundColor: `${component.color}15`,
+                        color: component.color,
+                      }}
+                    >
+                      {component.icon}
+                    </div>
+                    <div style={styles.componentInfo}>
+                      <h3 style={styles.componentTitle}>{component.title}</h3>
+                      <p style={styles.componentDescription}>{component.description}</p>
+                    </div>
+                    <span
+                      style={{
+                        ...styles.launchBadge,
+                        backgroundColor: component.color,
+                      }}
+                    >
+                      {isLoading ? '...' : 'Launch'}
+                    </span>
+                  </button>
+                  <a
+                    href={component.docsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={styles.docsLink}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {isLoading ? '...' : 'Launch'}
-                  </span>
-                </button>
+                    View docs →
+                  </a>
+                </div>
               ))}
             </div>
           </div>
@@ -417,6 +432,18 @@ const styles = {
     color: '#fff',
     fontSize: '13px',
     fontWeight: '600',
+  },
+  cardWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  docsLink: {
+    fontSize: '12px',
+    color: '#6366f1',
+    textDecoration: 'none',
+    textAlign: 'center',
+    padding: '2px 0',
   },
   note: {
     textAlign: 'center',

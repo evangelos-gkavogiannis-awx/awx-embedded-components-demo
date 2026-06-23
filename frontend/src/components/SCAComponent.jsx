@@ -284,6 +284,11 @@ export default function SCAComponent({ credentials, onBack, setError }) {
   const canSetup = accountId.trim() && userEmail.trim();
   const canGetBalance = accountId.trim();
 
+  const balanceItems = balanceData
+    ? (Array.isArray(balanceData) ? balanceData : (balanceData?.items || []))
+    : [];
+  const nonZeroBalances = balanceItems.filter(b => (b.total_amount || 0) > 0);
+
   return (
     <div style={{ ...styles.container, ...embeddedPageContainerStyle }}>
       <div style={styles.header}>
@@ -331,29 +336,39 @@ export default function SCAComponent({ credentials, onBack, setError }) {
               Not needed for GET Balance. Required for SCA Setup, and for SCA Verify if authentication is triggered.
             </p>
           </div>
-          <div style={styles.buttonRow}>
-            <button
-              type="button"
-              onClick={handleLaunchScaSetup}
-              disabled={!canSetup || isLaunchingSetup}
-              style={{
-                ...styles.primaryButton,
-                opacity: !canSetup || isLaunchingSetup ? 0.7 : 1,
-              }}
-            >
-              {isLaunchingSetup ? 'Launching...' : 'Launch SCA Setup'}
-            </button>
-            <button
-              type="button"
-              onClick={handleGetBalance}
-              disabled={!canGetBalance || isLoadingBalance}
-              style={{
-                ...styles.secondaryButton,
-                opacity: !canGetBalance || isLoadingBalance ? 0.7 : 1,
-              }}
-            >
-              {isLoadingBalance ? 'Loading...' : 'GET Balance'}
-            </button>
+          <div style={styles.actionSections}>
+            <div style={styles.actionBlock}>
+              <button
+                type="button"
+                onClick={handleLaunchScaSetup}
+                disabled={!canSetup || isLaunchingSetup}
+                style={{
+                  ...styles.primaryButton,
+                  opacity: !canSetup || isLaunchingSetup ? 0.7 : 1,
+                }}
+              >
+                {isLaunchingSetup ? 'Launching...' : 'Launch SCA Setup'}
+              </button>
+              <p style={styles.actionNote}>
+                This is about to set up Strong Customer Authentication for the connected account user.
+              </p>
+            </div>
+            <div style={styles.actionBlock}>
+              <button
+                type="button"
+                onClick={handleGetBalance}
+                disabled={!canGetBalance || isLoadingBalance}
+                style={{
+                  ...styles.secondaryButton,
+                  opacity: !canGetBalance || isLoadingBalance ? 0.7 : 1,
+                }}
+              >
+                {isLoadingBalance ? 'Loading...' : 'GET Balance'}
+              </button>
+              <p style={styles.actionNote}>
+                Retrieves the balance of the connected account. SCA verification will be triggered automatically if required.
+              </p>
+            </div>
           </div>
           {pendingVerify && (
             <div style={styles.verifyPrompt}>
@@ -404,8 +419,32 @@ export default function SCAComponent({ credentials, onBack, setError }) {
 
       {balanceData && (
         <div style={styles.balanceCard}>
-          <h3 style={styles.balanceTitle}>Balance response</h3>
-          <pre style={styles.balancePre}>{JSON.stringify(balanceData, null, 2)}</pre>
+          <h3 style={styles.balanceTitle}>Account Balance</h3>
+          {nonZeroBalances.length === 0 ? (
+            <p style={styles.noBalance}>No non-zero balances found for this account.</p>
+          ) : (
+            <div style={styles.balanceGrid}>
+              {nonZeroBalances.map((b) => (
+                <div key={b.currency} style={styles.balanceItem}>
+                  <div style={styles.currencyTag}>{b.currency}</div>
+                  <div style={styles.balanceRow}>
+                    <span style={styles.balanceLabel}>Available</span>
+                    <span style={styles.balanceValue}>{(b.available_amount || 0).toLocaleString()}</span>
+                  </div>
+                  {(b.pending_amount || 0) > 0 && (
+                    <div style={styles.balanceRow}>
+                      <span style={styles.balanceLabel}>Pending</span>
+                      <span style={styles.balanceValue}>{b.pending_amount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div style={styles.balanceTotalRow}>
+                    <span style={styles.balanceTotalLabel}>Total</span>
+                    <span style={styles.balanceTotalValue}>{(b.total_amount || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -488,10 +527,23 @@ const styles = {
     color: '#888',
     marginTop: '6px',
   },
-  buttonRow: {
+  actionSections: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: '12px',
+    gap: '20px',
+    alignItems: 'flex-start',
+  },
+  actionBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  actionNote: {
+    fontSize: '12px',
+    color: '#666',
+    margin: 0,
+    maxWidth: '220px',
+    lineHeight: '1.5',
   },
   primaryButton: {
     padding: '14px 24px',
@@ -545,12 +597,64 @@ const styles = {
     marginBottom: '12px',
     color: '#1a1a1a',
   },
-  balancePre: {
-    background: '#f5f7fa',
-    padding: '16px',
-    borderRadius: '8px',
-    overflow: 'auto',
-    fontSize: '13px',
+  noBalance: {
+    fontSize: '14px',
+    color: '#666',
     margin: 0,
+  },
+  balanceGrid: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  balanceItem: {
+    backgroundColor: '#f5f7fa',
+    borderRadius: '12px',
+    padding: '16px 20px',
+    minWidth: '180px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  currencyTag: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#e11d48',
+    marginBottom: '4px',
+    letterSpacing: '0.5px',
+  },
+  balanceRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '24px',
+  },
+  balanceLabel: {
+    fontSize: '12px',
+    color: '#888',
+  },
+  balanceValue: {
+    fontSize: '14px',
+    color: '#333',
+    fontWeight: '500',
+  },
+  balanceTotalRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '24px',
+    borderTop: '1px solid #e8e8e8',
+    paddingTop: '8px',
+    marginTop: '2px',
+  },
+  balanceTotalLabel: {
+    fontSize: '12px',
+    color: '#333',
+    fontWeight: '600',
+  },
+  balanceTotalValue: {
+    fontSize: '18px',
+    color: '#1a1a1a',
+    fontWeight: '700',
   },
 };
